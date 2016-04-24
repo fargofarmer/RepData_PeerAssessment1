@@ -1,0 +1,122 @@
+---
+title: "Reproducible Research Course Assignment 1"
+author: "PK"
+date: "April 23, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+
+
+#####Installing required libraries
+
+library(knitr)  
+opts_chunk$set(echo = TRUE)  
+library(dplyr)  
+library(ggplot2)
+```
+```{r}
+#####To change the date into dateformat, installing lubridate package  
+library(lubridate)  
+```
+
+###Reading activity data .csv file  
+```{r}
+activitydata<-read.csv("activity.csv", header = TRUE, sep=',', colClasses = c("numeric", "character", "integer"))  
+```
+####Changing the date format  
+```{r}
+activitydata$date<-ymd(activitydata$date) 
+```
+####Mean of Total Number of Steps taken per day
+```{r}
+steps <- activitydata %>%  
+  filter(!is.na(steps)) %>%  
+  group_by(date) %>%  
+  summarize(steps = sum(steps)) %>%  
+  print  
+```
+
+####Plotting the Histogram of All Steps Taken per Day Using 'ggplot2' Library and   printing the mean and median of the steps
+```{r}
+ggplot(steps, aes(x = steps)) +
+  geom_histogram(fill = "red", binwidth = 1000) +
+  labs(title = "Histogram of Steps per day", x = "Steps per day", y = "Frequency")  
+meanofsteps <- mean(steps$steps, na.rm = TRUE)  
+medianofsteps <- median(steps$steps, na.rm = TRUE)  
+print(meanofsteps)  
+print(medianofsteps) 
+```
+
+####Summary of Average Daily Pattern of Steps
+```{r}
+interval <- activitydata %>%  
+  filter(!is.na(steps)) %>%  
+  group_by(interval) %>%  
+  summarize(steps = mean(steps))  
+```
+####Plotting  A Time Series Plot (i.e. type = "l") of the 5-minute Interval (x-axis) and the Average Number of Steps Taken, Averaged Across All days (y-axis)
+```{r}
+ggplot(interval, aes(x=interval, y=steps)) +
+  geom_line(color = "blue") 
+```
+
+#### Printing Summary of 5-minute Interval, On Average Across All the Days in the Dataset, Contains the Maximum Number of Steps
+```{r}
+interval[which.max(interval$steps),]  
+```
+
+####Impiuting the Missing Data
+######1. Total No. of Missing Values in the Dataset
+```{r}
+print(sum(is.na(activitydata$steps)))  
+```
+
+######2. Creating a New Dataset That is Equal to the Original Dataset but with the Missing Data Filled in Using tapply Function
+```{r}
+alldata <- activitydata  
+nas <- is.na(alldata$steps)  
+avgofinterval <- tapply(alldata$steps, alldata$interval, mean, na.rm=TRUE, simplify=TRUE) 
+alldata$steps[nas] <- avgofinterval[as.character(alldata$interval[nas])]  
+print(summary(is.na(alldata$steps)))  
+```
+
+######3. Calculaing and Plotting Histogram for The Number of Steps Taken in Each 5-minute Interval per Day Using dplyr and group by interval. 
+```{r}
+allsteps <- alldata %>%  
+  filter(!is.na(steps)) %>%  
+  group_by(date) %>%  
+  summarize(steps = sum(steps)) %>%  
+  print
+ggplot(allsteps, aes(x = steps)) +
+  geom_histogram(fill = "pink", binwidth = 1000) +
+  labs(title = "Histogram of all Steps per day with missing values", x = "Steps per day", y = "Frequency")  
+```
+
+######4. Calculating Meand and Median 
+```{r}
+meanofallsteps <- mean(allsteps$steps, na.rm = TRUE)  
+medianofallsteps <- median(allsteps$steps, na.rm = TRUE)  
+print(meanofallsteps)  
+print(medianofallsteps)  
+```
+
+####Checking the Differences in Activity Patterns between Weekdays and Weekends 
+```{r}
+alldata <- mutate(alldata, weektype = ifelse(weekdays(alldata$date) == "Saturday" | weekdays(alldata$date) == "Sunday", "weekend", "weekday"))  
+alldata$weektype <- as.factor(alldata$weektype)  
+head(alldata)  
+```
+####Plotting the above Result Using ggplot2 Package
+```{r}
+allinterval <- alldata %>%  
+  group_by(interval, weektype) %>%  
+  summarise(steps = mean(steps))  
+ s<-ggplot(allinterval, aes(x=interval, y=steps, color = weektype)) +
+  geom_line() +
+  facet_wrap(~weektype, ncol = 1, nrow=2)  
+  print(s)  
+```
